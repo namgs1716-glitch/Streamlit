@@ -36,7 +36,7 @@ exports.handler = async function(event, context) {
 
     // 5. 제미나이에게 질문 + 지식 전달
     // (여기서 아까 성공했던 'gemini-2.0-flash-exp' 등을 쓰세요)
-    const chatModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+    const chatModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
     
     const prompt = `
       너는 건설공사 안전관리 챗봇이야. 
