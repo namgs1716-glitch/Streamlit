@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
 
     // 3. Gemini API 설정 (환경변수에서 키 가져옴)
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // 4. 시스템 프롬프트 (여기에 엑셀 내용을 요약해서 텍스트로 넣어야 함)
     const systemPrompt = `
