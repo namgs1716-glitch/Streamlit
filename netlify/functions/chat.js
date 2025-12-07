@@ -26,7 +26,7 @@ exports.handler = async function(event, context) {
     const { data: documents, error } = await supabase.rpc("match_documents", {
       query_embedding: embedding,
       match_threshold: 0.0, // 0.0으로 설정해도 위 SQL에서 필터를 뺐으니 상관없음
-      match_count: 3
+      match_count: 10
     });
 
     if (error) console.error("Supabase 검색 에러:", error);
