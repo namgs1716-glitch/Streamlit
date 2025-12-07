@@ -27,7 +27,6 @@ for index, row in df.iterrows():
     result = genai.embed_content(
         model="models/text-embedding-004",
         content=text_content,
-        task_type="retrieval_document"
     )
     embedding_vector = result['embedding']
     
