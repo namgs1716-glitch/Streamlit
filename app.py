@@ -52,7 +52,7 @@ if prompt := st.chat_input("질문을 입력하세요..."):
                 
                 # 2) Gemini에게 검색 결과 + 질문을 같이 줌
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-2.5-flash')
                 
                 full_prompt = f"""
                 당신은 건설안전 전문가입니다. 아래 [검색된 정보]를 바탕으로 사용자의 질문에 답변하십시오.
