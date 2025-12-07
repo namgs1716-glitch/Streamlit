@@ -48,7 +48,7 @@ exports.handler = async function(event, context) {
     }
 
     // 6. 제미나이 답변 생성
-    const chatModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+    const chatModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
     
     const prompt = `
       너는 안전관리 챗봇이야.
