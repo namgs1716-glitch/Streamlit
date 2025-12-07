@@ -23,7 +23,7 @@ exports.handler = async function(event, context) {
     // 4. 수파베이스에서 지식 검색 (우리가 만든 match_documents 함수 실행)
     const { data: documents, error } = await supabase.rpc("match_documents", {
       query_embedding: embedding,
-      match_threshold: 0.4, // 유사도 40% 이상인 것만 (너무 높으면 못 찾음)
+      match_threshold: 0.2, // 유사도 40% 이상인 것만 (너무 높으면 못 찾음)
       match_count: 3        // 가장 비슷한 3개만 가져오기
     });
 
