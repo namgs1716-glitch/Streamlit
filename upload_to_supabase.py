@@ -13,7 +13,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # --- 엑셀 파일 읽기 ---
-df = pd.read_excel("safety_faq.xlsx", engine='openpyxl') # 파일 경로 확인!
+df = pd.read_excel("C:\dev\Streamlit\safety_faq.xlsx", engine='openpyxl') # 파일 경로 확인!
 df = df.dropna(subset=['Q', 'A'])
 
 print(f"총 {len(df)}개의 데이터를 업로드합니다...")
