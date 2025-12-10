@@ -1,24 +1,7 @@
 {
-  "name": "streamlit",
+  "name": "safety-ai-project",
   "version": "1.0.0",
-  "main": "script.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/namgs1716-glitch/Streamlit.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/namgs1716-glitch/Streamlit/issues"
-  },
-  "homepage": "https://github.com/namgs1716-glitch/Streamlit#readme",
-  "description": "",
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@supabase/supabase-js": "^2.86.2"
+    "build": "node generate-env.js"
   }
 }

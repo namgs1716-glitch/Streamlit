@@ -1,11 +1,29 @@
-/* style.css */
-body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; height: 100vh; margin: 0; }
-.chat-container { width: 100%; max-width: 400px; background: white; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-.header { background: #2c3e50; color: white; padding: 15px; text-align: center; }
-.chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-.message { padding: 10px 15px; border-radius: 15px; max-width: 80%; line-height: 1.4; font-size: 14px; }
-.message.bot { background: #e9ecef; align-self: flex-start; border-bottom-left-radius: 0; }
-.message.user { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
-.input-area { padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 10px; }
-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+body { font-family: 'Suit', 'Pretendard', sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; color: #333; }
+.container { max-width: 600px; margin: 0 auto; padding: 20px; }
+header { text-align: center; margin-bottom: 30px; }
+h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 5px; }
+h2 { font-size: 1.2rem; color: #34495e; }
+
+/* 메뉴 카드 */
+.menu-grid { display: grid; gap: 15px; }
+.card { background: white; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: 0.2s; border: 1px solid #e1e4e8; }
+.card:hover { transform: translateY(-3px); border-color: #3498db; box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2); }
+.card .icon { font-size: 2rem; }
+.card .info h3 { margin: 0 0 5px 0; font-size: 1.1rem; }
+.card .info p { margin: 0; font-size: 0.9rem; color: #7f8c8d; }
+
+/* 공통 요소 */
+.back-link { display: inline-block; margin-bottom: 20px; color: #7f8c8d; text-decoration: none; font-size: 0.9rem; }
+.btn { background: #3498db; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 10px; }
+.btn:hover { background: #2980b9; }
+textarea, input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-top: 10px; font-family: inherit; }
+
+/* 채팅창 */
+#chat-box { height: 400px; overflow-y: auto; background: white; border-radius: 12px; padding: 15px; border: 1px solid #e1e4e8; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+.message { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; line-height: 1.5; }
+.user { align-self: flex-end; background: #3498db; color: white; border-bottom-right-radius: 2px; }
+.bot { align-self: flex-start; background: #f1f3f5; color: #333; border-bottom-left-radius: 2px; }
+
+/* 분석 결과 */
+#result-area { background: white; padding: 20px; border-radius: 12px; margin-top: 20px; white-space: pre-wrap; line-height: 1.6; border: 1px solid #e1e4e8; }
+img#preview { max-width: 100%; border-radius: 8px; margin-top: 10px; display: none; }
