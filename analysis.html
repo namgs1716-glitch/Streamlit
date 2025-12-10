@@ -2,97 +2,391 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>아차사고 분석</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>스마트 안전 지킴이 (Netlify Ver.)</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root { --primary-color: #0056b3; --bg-color: #ebedf0; }
+        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; color: #333; }
+
+        /* === 웹 모바일 스타일 === */
+        .app-container { max-width: 500px; margin: 0 auto; background: white; min-height: 100vh; display: flex; flex-direction: column; }
+        header { background: white; padding: 20px; text-align: center; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 100; }
+        .content-area { padding: 20px; flex: 1; background: #f8f9fa; }
+        
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); overflow: hidden; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input { width: 100%; padding: 14px; border: 1px solid #e9ecef; border-radius: 10px; box-sizing: border-box; }
+        
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; gap: 8px; margin-top: 15px;}
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-outline { background: white; border: 1px solid #ddd; color: #555; }
+        
+        /* 사진 스타일 */
+        .photo-container { display: flex; gap: 10px; margin-top: 15px; margin-bottom: 15px; }
+        .photo-wrapper { flex: 1; display: flex; flex-direction: column; }
+        .report-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 8px; background: #eee; border: 1px solid #eee; margin-top: 5px; }
+
+        .accordion-header { background: #f8f9fa; padding: 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; margin-top: 10px; font-weight: 600; font-size: 14px; }
+        .accordion-content { padding: 15px; background: #fff; border: 1px solid #f8f9fa; font-size: 14px; white-space: pre-wrap; line-height: 1.6; }
+        .hidden { display: none !important; }
+
+        /* 탭 스타일 */
+        .tab-container { padding: 15px 20px 0; background: white; }
+        .tab-switch { display: flex; background: #f1f3f5; border-radius: 12px; padding: 4px; position: relative; }
+        .tab-indicator { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: white; border-radius: 10px; transition: transform 0.3s; z-index: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+        .tab-btn { flex: 1; border: none; background: transparent; padding: 12px; font-weight: 600; color: #868e96; cursor: pointer; z-index: 2; }
+        .tab-btn.active { color: #333; }
+
+        /* 뒤로가기 링크 (analysis.html 스타일 유지) */
+        .back-link { display: inline-block; margin-bottom: 10px; text-decoration: none; color: #666; font-size: 0.9rem; padding: 10px; }
+
+        /* PDF 숨김 영역 */
+        #pdf-hidden-area { position: absolute; top: 0; left: -9999px; }
+        .pdf-page { width: 210mm; min-height: 297mm; background: white; padding: 20mm; box-sizing: border-box; font-family: 'Pretendard', sans-serif; color: #000; display: flex; flex-direction: column; }
+        .pdf-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .pdf-title { font-size: 24px; font-weight: bold; }
+        .pdf-sub { font-size: 12px; color: #555; margin-top: 5px; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #333; padding: 12px; text-align: left; font-size: 14px; }
+        .pdf-table th { background: #f0f0f0; text-align: center; width: 100px; font-weight: bold; }
+        .pdf-section-title { font-size: 16px; font-weight: bold; margin: 20px 0 10px; border-left: 5px solid #0056b3; padding-left: 10px; }
+        .pdf-photos { display: flex; gap: 15px; margin-top: 10px; }
+        .pdf-photo-box { flex: 1; text-align: center; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+        .pdf-photo-img { width: 100%; height: 250px; object-fit: cover; margin-bottom: 5px; }
+        .pdf-text-box { border: 1px solid #333; padding: 20px; min-height: 500px; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+        .sign-area { margin-top: auto; text-align: right; font-size: 16px; padding-top: 30px; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <a href="index.html" class="back-link">← 메인으로</a>
-        <h2>📸 아차사고 위험 분석</h2>
 
-        <input type="file" id="image-input" accept="image/*" style="display:none;">
-        
-        <button class="btn" id="upload-trigger-btn">📷 사진 촬영 / 업로드</button>
-        
-        <img id="preview" alt="미리보기">
-        
-        <button class="btn" id="analyze-btn" style="display:none; background-color: #27ae60;">🔍 AI 분석 시작</button>
+<div class="app-container">
+    <a href="index.html" class="back-link">← 메인으로</a>
+    <header><h1><i class="fa-solid fa-helmet-safety" style="color:#f59f00;"></i> 스마트 안전 지킴이</h1></header>
 
-        <div id="result-area" style="display:none;"></div>
+    <div class="tab-container">
+        <div class="tab-switch">
+            <div class="tab-indicator" id="tabIndicator"></div>
+            <button class="tab-btn active" onclick="switchTab(0)">🚨 위험 신고</button>
+            <button class="tab-btn" onclick="switchTab(1)">✅ 조치 인증</button>
+        </div>
     </div>
 
-    <script type="module">
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
-        // 중요: apikey.js 파일이 HTML 파일과 같은 폴더에 있어야 합니다.
-        import { CONFIG } from './apikey.js';
+    <div class="content-area">
+        <div id="reportSection">
+            <div class="card">
+                <h3>📝 작업자 정보</h3>
+                <div class="input-group">
+                    <div style="flex:2;"><input type="text" id="nickName" placeholder="별명 (예: 김반장)"></div>
+                    <div style="flex:1;"><input type="text" id="phoneEnd" placeholder="1234" maxlength="4" style="text-align:center;"></div>
+                </div>
+                <label>📸 현장 사진</label>
+                <input type="file" id="beforeFile" accept="image/*">
+                <button class="btn btn-primary" id="reportBtn" onclick="processReport()">AI 분석 및 접수</button>
+            </div>
+            <div id="aiResult" class="card hidden">
+                <h4>🤖 AI 분석 결과</h4>
+                <div id="diagnosisText" style="font-size:14px; line-height:1.6; white-space: pre-wrap;"></div>
+            </div>
+        </div>
 
-        // 1. DOM 요소 가져오기
-        const imageInput = document.getElementById('image-input');
-        const uploadTriggerBtn = document.getElementById('upload-trigger-btn');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const previewImg = document.getElementById('preview');
-        const resultDiv = document.getElementById('result-area');
+        <div id="actionSection" class="hidden">
+            <div class="card">
+                <h3>🔍 내역 조회</h3>
+                <div class="input-group">
+                    <input type="text" id="searchNick" placeholder="별명">
+                    <input type="text" id="searchPhone" placeholder="1234">
+                </div>
+                <button class="btn btn-outline" onclick="searchMyList()">조회하기</button>
+            </div>
+            <div id="pendingList"></div>
+        </div>
+    </div>
+</div>
 
-        // 2. 사진 업로드 버튼 클릭 시 숨겨진 input 클릭 연결
-        uploadTriggerBtn.addEventListener('click', () => {
-            imageInput.click();
+<div id="pdf-hidden-area">
+    <div id="pdf-page-1" class="pdf-page">
+        <div class="pdf-header">
+            <div class="pdf-title">건설 현장 위험성 평가 결과서</div>
+            <div class="pdf-sub">Smart Construction Safety Report</div>
+        </div>
+        <table class="pdf-table">
+            <tr>
+                <th>문서 번호</th><td id="pdf-id"></td><th>작성 일자</th><td id="pdf-date"></td>
+            </tr>
+            <tr>
+                <th>현장 명칭</th><td>전국 표준 현장</td><th>작 업 자</th><td id="pdf-worker"></td>
+            </tr>
+            <tr>
+                <th>평가 결과</th><td colspan="3" id="pdf-score" style="font-weight:bold; color:blue;"></td>
+            </tr>
+        </table>
+        <div class="pdf-section-title">1. 현장 조치 사진 (Before & After)</div>
+        <div class="pdf-photos">
+            <div class="pdf-photo-box">
+                <div style="font-weight:bold; margin-bottom:5px; background:#eee; padding:5px;">[ 조치 전 - Before ]</div>
+                <img id="pdf-img-before" class="pdf-photo-img" crossOrigin="anonymous">
+            </div>
+            <div class="pdf-photo-box">
+                <div style="font-weight:bold; margin-bottom:5px; background:#d4edda; padding:5px;">[ 조치 후 - After ]</div>
+                <img id="pdf-img-after" class="pdf-photo-img" crossOrigin="anonymous">
+            </div>
+        </div>
+        <div style="margin-top:auto; font-size:12px; color:#999; text-align:center;">- 1 / 2 page -</div>
+    </div>
+    <div id="pdf-page-2" class="pdf-page">
+        <div class="pdf-header"><div class="pdf-title">상세 조치 결과</div></div>
+        <div class="pdf-section-title">2. AI 위험성 분석 및 조치 내역</div>
+        <div id="pdf-ai-text" class="pdf-text-box"></div>
+        <div class="sign-area">
+            <p>위와 같이 안전 조치를 완료하였음을 보고합니다.</p><br><br><br>
+            <p>작성자 : <span id="pdf-sign-name" style="font-weight:bold;"></span> (서명)</p><br>
+            <p>확인자 : 안전관리책임자 (서명)</p>
+        </div>
+        <div style="margin-top:auto; font-size:12px; color:#999; text-align:center;">- 2 / 2 page -</div>
+    </div>
+</div>
+
+<script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+    // Netlify 환경변수에서 생성된 apikey.js 불러오기 (보안)
+    import { CONFIG } from './apikey.js';
+
+    // === Supabase 설정 (기존 키 유지) ===
+    // ⚠️ 주의: 실제 서비스 시 Supabase 키도 Netlify 환경변수로 옮기는 것이 좋습니다.
+    const SUPABASE_URL = 'https://yrerfkfyilucucgwoyyq.supabase.co'; 
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZXJma2Z5aWx1Y3VjZ3dveXlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNjgzNzMsImV4cCI6MjA3ODk0NDM3M30.2b2Y4Uano6qL6veJhtXY3lxhvMwY01fvraXe9vaDALk';
+
+    // 클라이언트 초기화
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // === Gemini 설정 (Netlify 환경변수 사용) ===
+    // apikey.js에서 불러온 CONFIG.GEMINI_KEY를 사용합니다.
+    const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
+    // 안정적인 1.5 Flash 모델 사용
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+
+    // === 함수 정의 및 window 객체 할당 (HTML onclick 호환용) ===
+
+    // 1. 탭 전환
+    window.switchTab = (index) => {
+        const indicator = document.getElementById('tabIndicator');
+        const btns = document.querySelectorAll('.tab-btn');
+        const sections = [document.getElementById('reportSection'), document.getElementById('actionSection')];
+        indicator.style.transform = `translateX(${index * 100}%)`;
+        btns.forEach((btn, i) => btn.classList.toggle('active', i === index));
+        sections.forEach((sec, i) => { i === index ? sec.classList.remove('hidden') : sec.classList.add('hidden'); });
+    }
+
+    // 2. 아코디언 토글
+    window.toggleAccordion = (id) => {
+        const content = document.getElementById(`diagnosis-${id}`);
+        const icon = document.getElementById(`icon-${id}`);
+        content.classList.toggle('hidden');
+        icon.className = content.classList.contains('hidden') ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
+    };
+
+    // 3. 파일 -> GenerativePart 변환
+    async function fileToGenerativePart(file) {
+        return new Promise((r) => {
+            const reader = new FileReader();
+            reader.onloadend = () => r({ inlineData: { data: reader.result.split(",")[1], mimeType: file.type } });
+            reader.readAsDataURL(file);
         });
+    }
 
-        // 3. 이미지 미리보기 기능 (onchange 대체)
-        imageInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                previewImg.src = URL.createObjectURL(file);
-                previewImg.style.display = 'block';
-                analyzeBtn.style.display = 'block';
-                resultDiv.style.display = 'none';
+    // 4. 리포트 제출 (AI 분석)
+    window.processReport = async () => {
+        const nick = document.getElementById('nickName').value.trim();
+        const phone = document.getElementById('phoneEnd').value.trim();
+        const fileInput = document.getElementById('beforeFile');
+        const btn = document.getElementById('reportBtn');
+
+        if (!nick || phone.length < 4 || !fileInput.files[0]) return alert("정보를 모두 입력해주세요.");
+        
+        btn.disabled = true;
+        btn.innerText = "🚨 분석 중...";
+
+        try {
+            const file = fileInput.files[0];
+            const imagePart = await fileToGenerativePart(file);
+            const prompt = `당신은 건설 안전 전문가입니다. 
+            1. '🚨 [긴급] 최우선 조치 사항 (TOP 2)'를 선정하세요.
+            2. 나머지는 '기타'로 분류하세요.
+            답변은 한국어로 명확하게 작성하세요.`;
+
+            const result = await model.generateContent([prompt, imagePart]);
+            const response = await result.response;
+            const aiText = response.text();
+            
+            document.getElementById('diagnosisText').innerText = aiText;
+            document.getElementById('aiResult').classList.remove('hidden');
+            
+            // Supabase 스토리지 업로드
+            const fileName = `before_${Date.now()}.jpg`;
+            await supabase.storage.from('site_photos').upload(fileName, file);
+            const { data: { publicUrl } } = supabase.storage.from('site_photos').getPublicUrl(fileName);
+
+            // DB 저장
+            const { error } = await supabase.from('safety_reports').insert([{
+                worker_name: `${nick}_${phone}`,
+                before_image_url: publicUrl,
+                ai_diagnosis: aiText,
+                status: 'pending'
+            }]);
+
+            if (error) throw error;
+            alert("접수 완료!");
+            document.getElementById('searchNick').value = nick;
+            document.getElementById('searchPhone').value = phone;
+
+        } catch (e) { 
+            console.error(e);
+            alert("오류: " + e.message); 
+        } 
+        finally { btn.disabled = false; btn.innerText = "AI 분석 및 접수"; }
+    };
+
+    // 5. 내역 조회
+    window.searchMyList = async () => {
+        const nick = document.getElementById('searchNick').value.trim();
+        const phone = document.getElementById('searchPhone').value.trim();
+        const listDiv = document.getElementById('pendingList');
+        
+        if (!nick || phone.length < 4) return alert("정보를 입력하세요.");
+        listDiv.innerHTML = "<div style='text-align:center; padding:20px;'>조회 중...</div>";
+
+        const { data, error } = await supabase.from('safety_reports').select('*').eq('worker_name', `${nick}_${phone}`).order('created_at', { ascending: false });
+
+        if (error || !data.length) { listDiv.innerHTML = "<div style='text-align:center; padding:20px;'>내역이 없습니다.</div>"; return; }
+
+        listDiv.innerHTML = "";
+        data.forEach(item => {
+            const isResolved = item.status === 'resolved';
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <span class="badge ${isResolved ? 'badge-success' : 'badge-pending'}">${isResolved ? '완료' : '대기'}</span>
+                    <small>${new Date(item.created_at).toLocaleDateString()}</small>
+                </div>
+                <div class="accordion-header" onclick="toggleAccordion('${item.id}')">
+                    <span>지적사항 보기</span><i id="icon-${item.id}" class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div id="diagnosis-${item.id}" class="accordion-content hidden">${item.ai_diagnosis}</div>
+                
+                <div class="photo-container">
+                    <div class="photo-wrapper">
+                        <small>Before</small>
+                        <img src="${item.before_image_url}" crossOrigin="anonymous" class="report-img">
+                    </div>
+                    ${item.after_image_url ? `
+                    <div class="photo-wrapper">
+                        <small>After</small>
+                        <img src="${item.after_image_url}" crossOrigin="anonymous" class="report-img">
+                    </div>` : ''}
+                </div>
+
+                ${!isResolved ? `
+                    <div style="margin-top:10px;">
+                        <input type="file" id="afterFile_${item.id}" accept="image/*">
+                        <button class="btn btn-success" onclick="verifyAction(this, '${item.id}', '${item.ai_diagnosis.replace(/\n/g, ' ')}')">AI 검사 시작</button>
+                    </div>` : `
+                    <button class="btn btn-primary" onclick="generateRealPDF('${item.id}', '${item.worker_name}', '${item.created_at}', '${encodeURIComponent(item.ai_diagnosis)}', '${item.before_image_url}', '${item.after_image_url}', '${item.safety_score}')">
+                        📄 보고서 출력 (A4 양식)
+                    </button>`
+                }
+            `;
+            listDiv.appendChild(div);
+        });
+    };
+
+    // 6. 조치 확인 (AI 검증)
+    window.verifyAction = async (btn, id, diagnosis) => {
+        const fileInput = document.getElementById(`afterFile_${id}`);
+        if (!fileInput.files[0]) return alert("사진 필수");
+        
+        btn.disabled = true; btn.innerText = "채점 중...";
+        try {
+            const file = fileInput.files[0];
+            const imagePart = await fileToGenerativePart(file);
+            const prompt = `과거 지적: "${diagnosis}"\n1. TOP 2 해결 여부 확인.\n2. 점수(0~100).\nJSON 답변: {"score": 80, "reason": "해결됨"}`;
+            
+            const result = await model.generateContent([prompt, imagePart]);
+            const response = await result.response;
+            let text = response.text();
+            
+            // JSON 파싱 (마크다운 제거)
+            text = text.replace(/```json|```/g, "").trim();
+            const aiData = JSON.parse(text);
+
+            if (aiData.score >= 40) { // 40점 이상 합격
+                const fileName = `after_${Date.now()}.jpg`;
+                await supabase.storage.from('site_photos').upload(fileName, file);
+                const { data: { publicUrl } } = supabase.storage.from('site_photos').getPublicUrl(fileName);
+                await supabase.from('safety_reports').update({ status: 'resolved', after_image_url: publicUrl, safety_score: aiData.score }).eq('id', id);
+                alert("합격! (" + aiData.score + "점)"); 
+                searchMyList(); // 목록 새로고침
+            } else { 
+                alert("불합격: " + aiData.reason); 
             }
-        });
+        } catch (e) { 
+            console.error(e);
+            alert("오류: " + e.message); 
+        } finally { btn.disabled = false; btn.innerText = "AI 검사 시작"; }
+    };
 
-        // 4. 분석 시작 기능 (onclick 대체)
-        analyzeBtn.addEventListener('click', async () => {
-            resultDiv.style.display = 'block';
-            resultDiv.innerText = "⏳ Gemini가 위험 요소를 분석 중입니다...";
+    // 7. PDF 생성
+    window.generateRealPDF = async (id, worker, date, diagnosis, beforeUrl, afterUrl, score) => {
+        // 이벤트 타겟(버튼) 찾기
+        const btn = event.target || event.currentTarget;
+        const originalText = btn.innerText;
+        btn.disabled = true; btn.innerText = "PDF 생성 중...";
 
-            try {
-                const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
-                
-                // 중요: 모델명을 'gemini-1.5-flash'로 수정 (2.5는 아직 공개 API에 없습니다)
-                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-                
-                const file = imageInput.files[0];
-                const base64Data = await fileToGenerativePart(file);
+        // 1. 데이터 채우기 (Page 1)
+        document.getElementById('pdf-id').innerText = id.substring(0, 8);
+        document.getElementById('pdf-date').innerText = new Date(date).toLocaleDateString();
+        document.getElementById('pdf-worker').innerText = worker;
+        document.getElementById('pdf-score').innerText = score + "점 (합격)";
+        document.getElementById('pdf-img-before').src = beforeUrl;
+        document.getElementById('pdf-img-after').src = afterUrl;
 
-                const prompt = "이 건설 현장 사진을 보고 [위험 요소 / 예상 사고 / 조치 사항 / 위험 등급] 형식으로 간단명료하게 보고서를 써줘.";
-                
-                const result = await model.generateContent([
-                    prompt, 
-                    base64Data
-                ]);
-                
-                const response = await result.response;
-                resultDiv.innerText = response.text();
+        // 2. 데이터 채우기 (Page 2)
+        document.getElementById('pdf-ai-text').innerText = decodeURIComponent(diagnosis);
+        document.getElementById('pdf-sign-name').innerText = worker.split('_')[0];
 
-            } catch (error) {
-                console.error(error); // 콘솔에도 자세한 에러 출력
-                resultDiv.innerText = "❌ 오류 발생: " + error.message;
-            }
-        });
+        // 이미지 로딩 대기
+        await new Promise(r => setTimeout(r, 1000));
 
-        // 5. 파일을 Base64로 변환하는 헬퍼 함수
-        async function fileToGenerativePart(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve({
-                    inlineData: {
-                        data: reader.result.split(',')[1],
-                        mimeType: file.type
-                    }
-                });
-                reader.readAsDataURL(file);
-            });
-        }
-    </script>
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = 210;
+        const pageHeight = 297;
+
+        // Page 1 캡처 및 추가
+        const page1 = document.getElementById('pdf-page-1');
+        const canvas1 = await html2canvas(page1, { scale: 2, useCORS: true });
+        const imgData1 = canvas1.toDataURL('image/png');
+        pdf.addImage(imgData1, 'PNG', 0, 0, pageWidth, pageHeight);
+
+        // Page 2 추가
+        pdf.addPage();
+        const page2 = document.getElementById('pdf-page-2');
+        const canvas2 = await html2canvas(page2, { scale: 2, useCORS: true });
+        const imgData2 = canvas2.toDataURL('image/png');
+        pdf.addImage(imgData2, 'PNG', 0, 0, pageWidth, pageHeight);
+
+        pdf.save(`안전보고서_${worker}.pdf`);
+        btn.disabled = false; btn.innerText = originalText;
+    };
+</script>
 </body>
 </html>
