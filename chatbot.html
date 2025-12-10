@@ -22,8 +22,9 @@
     </div>
 
     <script type="module">
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
-        import { CONFIG } from './apikey.js';
+         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+    // 다시 apikey.js를 불러오게 수정합니다.
+         import { CONFIG } from './apikey.js'; 
 
         const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
