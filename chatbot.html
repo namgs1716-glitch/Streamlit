@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSI 챗봇</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 메인으로</a>
+        <h2>🤖 CSI 안전 가이드</h2>
+
+        <div id="chat-box">
+            <div class="message bot">안녕하세요! 건설공사 안전관리 종합정보망(CSI) 및 안전 수칙에 대해 궁금한 점을 물어보세요.</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="질문을 입력하세요 (엔터로 전송)" onkeypress="if(event.keyCode==13) sendMsg()">
+            <button class="btn" onclick="sendMsg()">전송</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        import { CONFIG } from './apikey.js';
+
+        const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        window.sendMsg = async function() {
+            const input = document.getElementById('user-input');
+            const chatBox = document.getElementById('chat-box');
+            const msg = input.value;
+            if (!msg) return;
+
+            // 사용자 메시지 표시
+            chatBox.innerHTML += `<div class="message user">${msg}</div>`;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                // 시스템 프롬프트 (챗봇의 페르소나 설정)
+                const prompt = `
+                    너는 한국의 '건설공사 안전관리 종합정보망(CSI)' 전문 AI 챗봇이야.
+                    건설 현장 작업자나 관리자가 안전 관련 질문을 하면, 산업안전보건법과 CSI 매뉴얼에 기반해서 친절하고 전문적으로 답변해줘.
+                    질문: ${msg}
+                `;
+
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const text = response.text();
+
+                chatBox.innerHTML += `<div class="message bot">${text}</div>`;
+            } catch (error) {
+                chatBox.innerHTML += `<div class="message bot">⚠️ 오류: ${error.message}</div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
