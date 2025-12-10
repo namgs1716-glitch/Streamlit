@@ -59,7 +59,7 @@
                 const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
                 
                 // 중요: 모델명을 'gemini-1.5-flash'로 수정 (2.5는 아직 공개 API에 없습니다)
-                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
                 
                 const file = imageInput.files[0];
                 const base64Data = await fileToGenerativePart(file);
