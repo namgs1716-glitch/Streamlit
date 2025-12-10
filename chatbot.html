@@ -27,7 +27,7 @@
          import { CONFIG } from './apikey.js'; 
 
         const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
         window.sendMsg = async function() {
             const input = document.getElementById('user-input');
