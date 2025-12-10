@@ -3,43 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>안전 통계</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-    <div class="container">
-        <a href="index.html" class="back-link">← 메인으로</a>
-        <h2>📊 안전 관리 현황</h2>
+    <title>안전 관리 현황 및 기상</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=5ddbba0d44579d457d4c2d66b20e9b17"></script>
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 
-        <div class="card" style="display:block; margin-bottom: 20px;">
-            <h3>🌤️ 오늘의 날씨 (현장)</h3>
-            <p id="weather-text">데이터를 불러오는 중...</p>
+    <style>
+        /* 기본 폰트 및 배경 */
+        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; background-color: #ebedf0; }
+        
+        /* 기존 stats.html의 컨테이너/카드 스타일 유지 + Tailwind 호환 */
+        .app-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .back-link { display: inline-block; margin-bottom: 15px; text-decoration: none; color: #555; font-weight: 600; font-size: 0.95rem; }
+        .back-link:hover { color: #000; }
+        
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        /* 지도 오버레이 스타일 */
+        .weather-overlay {
+            background: rgba(255, 255, 255, 0.95); padding: 6px 10px; border-radius: 20px;
+            border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center; font-size: 13px; font-weight: 700; color: #334155;
+            display: flex; align-items: center; gap: 4px; pointer-events: none; white-space: nowrap;
+        }
+        .weather-icon { font-size: 18px; }
+        
+        /* 로딩 애니메이션 */
+        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #3b82f6; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="app-container">
+        <div class="flex justify-between items-center mb-4">
+            <a href="index.html" class="back-link">← 메인으로</a>
+            <h2 class="text-2xl font-bold text-gray-800">📊 현장 안전 상황실</h2>
         </div>
 
-        <div class="card" style="display:block;">
-            <canvas id="myChart"></canvas>
+        <div class="card overflow-hidden">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold flex items-center gap-2">🌤️ 실시간 현장 기상반</h3>
+                <button id="btnMyLoc" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm hover:bg-indigo-700 transition">📍 내 현장 위치 찾기</button>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6">
+                <div class="relative w-full lg:w-2/3 h-[400px] rounded-xl overflow-hidden border border-gray-200 shadow-inner group">
+                    <div id="map" class="absolute inset-0 w-full h-full"></div>
+                    <div class="absolute top-3 left-3 bg-white/90 p-3 rounded-lg shadow text-xs z-10 border border-indigo-50">
+                        <p class="font-bold text-indigo-800">📢 사용법</p>
+                        <p class="text-gray-600">👆 지도의 지역을 클릭하면</p>
+                        <p class="text-gray-600">상세 날씨와 안전 가이드가 표시됩니다.</p>
+                    </div>
+                </div>
+
+                <div class="w-full lg:w-1/3 flex flex-col">
+                    <div class="mb-4">
+                        <h2 id="locTitle" class="text-xl font-bold text-gray-800">지역을 선택하세요</h2>
+                        <p id="stnInfo" class="text-xs text-gray-400 mt-1">지도에서 현장 클릭</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-slate-50 p-3 rounded-xl border text-center">
+                            <div class="text-xs text-gray-500 mb-1">풍속 (m/s)</div>
+                            <div id="val_ws" class="text-2xl font-black text-gray-300">-</div>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border text-center">
+                            <div class="text-xs text-gray-500 mb-1">강수량 (mm)</div>
+                            <div id="val_rn" class="text-2xl font-bold text-gray-300">-</div>
+                        </div>
+                        <div class="bg-white p-2 rounded-lg border text-center">
+                            <div class="text-xs text-gray-500">기온</div>
+                            <div id="val_ta" class="text-lg font-bold">-</div>
+                        </div>
+                        <div class="bg-white p-2 rounded-lg border text-center">
+                            <div class="text-xs text-gray-500">습도</div>
+                            <div id="val_hm" class="text-lg font-bold">-</div>
+                        </div>
+                    </div>
+
+                    <div id="safetyGuide" class="hidden flex-1 bg-white border rounded-xl p-3 shadow-sm">
+                        <div class="flex items-center gap-2 mb-2 pb-2 border-b">
+                            <span class="text-lg">👷</span>
+                            <h3 class="font-bold text-sm text-gray-700">작업 안전 가이드</h3>
+                        </div>
+                        <div id="guideList" class="space-y-2 text-sm overflow-y-auto max-h-[120px]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="text-lg font-bold mb-4 border-b pb-3">📈 이번 달 아차사고 유형 분석</h3>
+            <div class="relative h-[300px] w-full">
+                <canvas id="myChart"></canvas>
+            </div>
         </div>
     </div>
 
     <script>
-        // type="module"을 일반 script로 변경해도 됩니다. (import가 없으므로)
-        // 만약 나중에 import를 써야 한다면 <script type="module">로 되돌리세요.
+        // --- 1. 기상 관련 설정 및 함수 ---
+        const SIDO_REG_MAP = {
+            "서울특별시": "11B10101", "부산광역시": "11H20201", "대구광역시": "11H10701",
+            "인천광역시": "11B20201", "광주광역시": "11F20501", "대전광역시": "11C20401",
+            "울산광역시": "11H20101", "세종특별자치시": "11C20404", "경기도": "11B20601",
+            "강원특별자치도": "11D10301", "충청북도": "11C10301", "충청남도": "11C20101", 
+            "전북특별자치도": "11F10201", "전라남도": "11F20301", "경상북도": "11H10501",
+            "경상남도": "11H20301", "제주특별자치도": "11G00201"
+        };
+        const GEO_SIDO = "/assets/geo/sido.geojson"; // 경로 확인 필요
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. 날씨 (예시 데이터)
-            const weatherText = document.getElementById('weather-text');
-            if (weatherText) {
-                weatherText.innerText = "🌡️ 기온: 24°C | 💧 습도: 45% | 🌬️ 풍속: 2m/s (작업 양호)";
+        document.addEventListener('DOMContentLoaded', async function() {
+            // === [Part 1] 지도 및 날씨 로직 ===
+            const mapContainer = document.getElementById('map');
+            if (window.kakao && window.kakao.maps) {
+                const map = new kakao.maps.Map(mapContainer, { center: new kakao.maps.LatLng(36.3, 127.8), level: 13 });
+                let selectedMarker = null;
+                let nationalWeatherData = null;
+
+                // 1-1. 전국 날씨 DB 로드
+                try {
+                    const res = await fetch('/.netlify/functions/kma-latest');
+                    const json = await res.json();
+                    if(json.ok) nationalWeatherData = json.items;
+                } catch(e) { console.error("전국 날씨 로드 실패", e); }
+
+                // 1-2. GeoJSON 로드 및 그리기
+                try {
+                    const res = await fetch(GEO_SIDO);
+                    const geo = await res.json();
+                    
+                    geo.features.forEach(feat => {
+                        const name = feat.properties.CTP_KOR_NM;
+                        const regId = SIDO_REG_MAP[name];
+                        
+                        const path = [];
+                        const geom = feat.geometry;
+                        const coords = geom.type === 'MultiPolygon' ? geom.coordinates : [geom.coordinates];
+                        coords.forEach(poly => poly.forEach(ring => path.push(ring.map(c => new kakao.maps.LatLng(c[1], c[0])))));
+
+                        const polygon = new kakao.maps.Polygon({
+                            map: map, path: path,
+                            strokeWeight: 1, strokeColor: '#64748b', strokeOpacity: 0.5,
+                            fillColor: '#fff', fillOpacity: 0.1
+                        });
+
+                        // 오버레이 표시
+                        if (nationalWeatherData && regId) {
+                            const wData = nationalWeatherData.find(i => i.regId === regId);
+                            if (wData) {
+                                const center = turf.centroid(feat);
+                                const [lon, lat] = center.geometry.coordinates;
+                                let icon = "☀️", bg = "#fff";
+                                const wf = (wData.wf || "").replace(/"/g, "");
+                                
+                                if (wf.includes("비")) { icon = "🌧️"; bg = "#eff6ff"; polygon.setOptions({fillColor: '#3b82f6', fillOpacity: 0.15}); }
+                                else if (wf.includes("눈")) { icon = "❄️"; bg = "#f0f9ff"; }
+                                else if (wf.includes("구름") || wf.includes("흐림")) { icon = "☁️"; bg = "#f8fafc"; }
+
+                                const content = `<div class="weather-overlay" style="background:${bg}"><span class="weather-icon">${icon}</span><span>${wData.ta ? wData.ta + '℃' : '-'}</span></div>`;
+                                new kakao.maps.CustomOverlay({ map: map, position: new kakao.maps.LatLng(lat, lon), content: content, yAnchor: 1 });
+                            }
+                        }
+
+                        // 이벤트
+                        kakao.maps.event.addListener(polygon, 'mouseover', () => polygon.setOptions({fillOpacity: 0.3, strokeColor: '#2563eb'}));
+                        kakao.maps.event.addListener(polygon, 'mouseout', () => polygon.setOptions({fillOpacity: 0.1, strokeColor: '#64748b'}));
+                        kakao.maps.event.addListener(polygon, 'click', (mouseEvent) => {
+                            const latLng = mouseEvent.latLng;
+                            displayMarker(latLng);
+                            fetchObservation(latLng.getLat(), latLng.getLng(), name);
+                        });
+                    });
+                } catch (e) { console.error("지도 그리기 실패", e); }
+
+                function displayMarker(latLng) {
+                    if (selectedMarker) selectedMarker.setMap(null);
+                    selectedMarker = new kakao.maps.Marker({ position: latLng, map: map });
+                    map.panTo(latLng);
+                }
+
+                // 내 위치 버튼
+                document.getElementById('btnMyLoc').addEventListener('click', () => {
+                    if(navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(pos => {
+                            const lat = pos.coords.latitude;
+                            const lon = pos.coords.longitude;
+                            const latLng = new kakao.maps.LatLng(lat, lon);
+                            map.setLevel(9);
+                            displayMarker(latLng);
+                            fetchObservation(lat, lon, "현 위치");
+                        });
+                    } else alert("위치 정보를 사용할 수 없습니다.");
+                });
+            } else {
+                console.error("카카오맵 로드 실패");
             }
 
-            // 2. 차트 그리기
-            const canvas = document.getElementById('myChart');
-            
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                
-                new Chart(ctx, {
+            // === [Part 2] 관측값 API 호출 함수 ===
+            async function fetchObservation(lat, lon, regionName) {
+                const infoEl = document.getElementById('stnInfo');
+                document.getElementById('locTitle').textContent = regionName || "선택 지역";
+                infoEl.innerHTML = '<span class="loader"></span> 데이터 수신 중...';
+                ['ws','rn','ta','hm'].forEach(id => document.getElementById('val_'+id).textContent = '-');
+
+                try {
+                    const res = await fetch(`/.netlify/functions/kma-observation?lat=${lat}&lon=${lon}`);
+                    const json = await res.json();
+                    if(!json.ok) throw new Error(json.error);
+
+                    const { station, data } = json;
+                    infoEl.textContent = `📡 ${station.name} 관측소 기준`;
+
+                    const setVal = (id, v, color=false) => {
+                        const el = document.getElementById('val_' + id);
+                        el.textContent = (v !== null) ? v : "-";
+                        el.className = (color && v >= 10) ? "text-2xl font-black text-red-600" : 
+                                       (color && v >= 8) ? "text-2xl font-bold text-orange-500" : 
+                                       "text-2xl font-bold text-gray-800";
+                    };
+
+                    setVal('ws', data.ws, true);
+                    setVal('rn', data.rn, true);
+                    document.getElementById('val_ta').textContent = data.ta || "-";
+                    document.getElementById('val_hm').textContent = data.hm || "-";
+                    
+                    updateSafetyGuide(data);
+                } catch(e) {
+                    infoEl.innerHTML = `<span class="text-red-500">수신 실패</span>`;
+                }
+            }
+
+            function updateSafetyGuide(obs) {
+                const list = document.getElementById('guideList');
+                const box = document.getElementById('safetyGuide');
+                list.innerHTML = '';
+                let risks = [];
+
+                if ((obs.ws || 0) >= 10) risks.push({lv:'crit', msg:"🚨 [강풍] 타워크레인 작업 중지"});
+                else if ((obs.ws || 0) >= 8) risks.push({lv:'warn', msg:"⚠️ [강풍] 고소작업/낙하물 주의"});
+                if ((obs.rn || 0) > 0) risks.push({lv:'warn', msg:"🌧️ [우천] 미끄러짐/감전 주의"});
+                if ((obs.ta || 0) >= 33) risks.push({lv:'crit', msg:"🔥 [폭염] 휴식시간 준수"});
+                if ((obs.ta || 0) <= -5) risks.push({lv:'warn', msg:"❄️ [한파] 보온 양생 관리"});
+
+                box.classList.remove('hidden');
+                if (risks.length > 0) {
+                    risks.forEach(r => {
+                        const bg = r.lv === 'crit' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700';
+                        list.innerHTML += `<div class="p-2 rounded border text-xs font-medium ${bg}">${r.msg}</div>`;
+                    });
+                } else {
+                    list.innerHTML = `<div class="p-2 rounded border bg-green-50 text-green-700 text-center text-xs">✅ 기상 상태 양호</div>`;
+                }
+            }
+
+            // === [Part 3] 통계 차트 (Chart.js) ===
+            const ctx = document.getElementById('myChart');
+            if (ctx) {
+                new Chart(ctx.getContext('2d'), {
                     type: 'bar',
                     data: {
                         labels: ['추락', '낙하', '전도', '협착', '화재'],
@@ -47,42 +269,21 @@
                             label: '이번 달 아차사고 신고 건수',
                             data: [12, 5, 3, 2, 1],
                             backgroundColor: [
-                                'rgba(255, 99, 132, 0.7)', // 추락 (빨강 - 위험)
-                                'rgba(54, 162, 235, 0.7)', // 낙하 (파랑)
-                                'rgba(255, 206, 86, 0.7)', // 전도 (노랑)
-                                'rgba(75, 192, 192, 0.7)', // 협착 (녹색)
-                                'rgba(153, 102, 255, 0.7)' // 화재 (보라)
+                                'rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)'
                             ],
                             borderColor: [
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 206, 86, 1)',
-                                'rgba(75, 192, 192, 1)',
-                                'rgba(153, 102, 255, 1)'
+                                'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)'
                             ],
-                            borderWidth: 1,
-                            borderRadius: 5
+                            borderWidth: 1, borderRadius: 5
                         }]
                     },
                     options: {
                         responsive: true,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1 // 정수 단위로 표시
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false // 범례 숨기기 (깔끔하게)
-                            },
-                            title: {
-                                display: true,
-                                text: '사고 유형별 통계'
-                            }
-                        }
+                        maintainAspectRatio: false, // 반응형 높이 조절
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                        plugins: { legend: { display: false } }
                     }
                 });
             }
