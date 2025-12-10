@@ -3,5 +3,25 @@
   "version": "1.0.0",
   "scripts": {
     "build": "node generate-env.js"
-  }
+  },
+  "main": "apikey.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "iceberg-js": "^0.8.1",
+    "tslib": "^2.8.1",
+    "undici-types": "^7.16.0",
+    "ws": "^8.18.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/namgs1716-glitch/Streamlit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/namgs1716-glitch/Streamlit/issues"
+  },
+  "homepage": "https://github.com/namgs1716-glitch/Streamlit#readme",
+  "description": ""
 }
