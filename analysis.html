@@ -11,60 +11,87 @@
         <a href="index.html" class="back-link">← 메인으로</a>
         <h2>📸 아차사고 위험 분석</h2>
 
-        <input type="file" id="image-input" accept="image/*" style="display:none;" onchange="previewImage(event)">
-        <button class="btn" onclick="document.getElementById('image-input').click()">📷 사진 촬영 / 업로드</button>
+        <input type="file" id="image-input" accept="image/*" style="display:none;">
+        
+        <button class="btn" id="upload-trigger-btn">📷 사진 촬영 / 업로드</button>
         
         <img id="preview" alt="미리보기">
-        <button class="btn" id="analyze-btn" onclick="analyze()" style="display:none; background-color: #27ae60;">🔍 AI 분석 시작</button>
+        
+        <button class="btn" id="analyze-btn" style="display:none; background-color: #27ae60;">🔍 AI 분석 시작</button>
 
         <div id="result-area" style="display:none;"></div>
     </div>
 
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        // 중요: apikey.js 파일이 HTML 파일과 같은 폴더에 있어야 합니다.
         import { CONFIG } from './apikey.js';
 
-        window.previewImage = function(event) {
+        // 1. DOM 요소 가져오기
+        const imageInput = document.getElementById('image-input');
+        const uploadTriggerBtn = document.getElementById('upload-trigger-btn');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const previewImg = document.getElementById('preview');
+        const resultDiv = document.getElementById('result-area');
+
+        // 2. 사진 업로드 버튼 클릭 시 숨겨진 input 클릭 연결
+        uploadTriggerBtn.addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        // 3. 이미지 미리보기 기능 (onchange 대체)
+        imageInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
-                const img = document.getElementById('preview');
-                img.src = URL.createObjectURL(file);
-                img.style.display = 'block';
-                document.getElementById('analyze-btn').style.display = 'block';
-                document.getElementById('result-area').style.display = 'none';
+                previewImg.src = URL.createObjectURL(file);
+                previewImg.style.display = 'block';
+                analyzeBtn.style.display = 'block';
+                resultDiv.style.display = 'none';
             }
-        }
+        });
 
-        window.analyze = async function() {
-            const fileInput = document.getElementById('image-input');
-            const resultDiv = document.getElementById('result-area');
-            
+        // 4. 분석 시작 기능 (onclick 대체)
+        analyzeBtn.addEventListener('click', async () => {
             resultDiv.style.display = 'block';
             resultDiv.innerText = "⏳ Gemini가 위험 요소를 분석 중입니다...";
 
             try {
                 const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
+                
+                // 중요: 모델명을 'gemini-1.5-flash'로 수정 (2.5는 아직 공개 API에 없습니다)
                 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 
-                const file = fileInput.files[0];
-                const base64Data = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(file);
-                });
+                const file = imageInput.files[0];
+                const base64Data = await fileToGenerativePart(file);
 
                 const prompt = "이 건설 현장 사진을 보고 [위험 요소 / 예상 사고 / 조치 사항 / 위험 등급] 형식으로 간단명료하게 보고서를 써줘.";
                 
                 const result = await model.generateContent([
                     prompt, 
-                    { inlineData: { data: base64Data, mimeType: file.type } }
+                    base64Data
                 ]);
                 
-                resultDiv.innerText = result.response.text();
+                const response = await result.response;
+                resultDiv.innerText = response.text();
 
             } catch (error) {
+                console.error(error); // 콘솔에도 자세한 에러 출력
                 resultDiv.innerText = "❌ 오류 발생: " + error.message;
             }
+        });
+
+        // 5. 파일을 Base64로 변환하는 헬퍼 함수
+        async function fileToGenerativePart(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve({
+                    inlineData: {
+                        data: reader.result.split(',')[1],
+                        mimeType: file.type
+                    }
+                });
+                reader.readAsDataURL(file);
+            });
         }
     </script>
 </body>

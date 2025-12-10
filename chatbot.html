@@ -26,7 +26,7 @@
         import { CONFIG } from './apikey.js';
 
         const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         window.sendMsg = async function() {
             const input = document.getElementById('user-input');
@@ -43,7 +43,7 @@
                 // 시스템 프롬프트 (챗봇의 페르소나 설정)
                 const prompt = `
                     너는 한국의 '건설공사 안전관리 종합정보망(CSI)' 전문 AI 챗봇이야.
-                    건설 현장 작업자나 관리자가 안전 관련 질문을 하면, 산업안전보건법과 CSI 매뉴얼에 기반해서 친절하고 전문적으로 답변해줘.
+                    건설 현장 작업자나 관리자가 안전 관련 질문을 하면, 건설기술진흥법과 CSI 매뉴얼에 기반해서 친절하고 전문적으로 답변해줘.
                     질문: ${msg}
                 `;
 
