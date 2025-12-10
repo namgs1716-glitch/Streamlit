@@ -22,27 +22,69 @@
         </div>
     </div>
 
-    <script type="module">
-        import { CONFIG } from './apikey.js';
+    <script>
+        // type="module"을 일반 script로 변경해도 됩니다. (import가 없으므로)
+        // 만약 나중에 import를 써야 한다면 <script type="module">로 되돌리세요.
 
-        // 1. 날씨 (예시 데이터 - 실제론 기상청 API 연동 필요)
-        document.getElementById('weather-text').innerText = "🌡️ 기온: 24°C | 💧 습도: 45% | 🌬️ 풍속: 2m/s (작업 양호)";
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 날씨 (예시 데이터)
+            const weatherText = document.getElementById('weather-text');
+            if (weatherText) {
+                weatherText.innerText = "🌡️ 기온: 24°C | 💧 습도: 45% | 🌬️ 풍속: 2m/s (작업 양호)";
+            }
 
-        // 2. 차트 그리기
-        const ctx = document.getElementById('myChart');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['추락', '낙하', '전도', '협착', '화재'],
-                datasets: [{
-                    label: '이번 달 아차사고 신고 건수',
-                    data: [12, 5, 3, 2, 1],
-                    backgroundColor: '#3498db',
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                scales: { y: { beginAtZero: true } }
+            // 2. 차트 그리기
+            const canvas = document.getElementById('myChart');
+            
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['추락', '낙하', '전도', '협착', '화재'],
+                        datasets: [{
+                            label: '이번 달 아차사고 신고 건수',
+                            data: [12, 5, 3, 2, 1],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)', // 추락 (빨강 - 위험)
+                                'rgba(54, 162, 235, 0.7)', // 낙하 (파랑)
+                                'rgba(255, 206, 86, 0.7)', // 전도 (노랑)
+                                'rgba(75, 192, 192, 0.7)', // 협착 (녹색)
+                                'rgba(153, 102, 255, 0.7)' // 화재 (보라)
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)'
+                            ],
+                            borderWidth: 1,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1 // 정수 단위로 표시
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false // 범례 숨기기 (깔끔하게)
+                            },
+                            title: {
+                                display: true,
+                                text: '사고 유형별 통계'
+                            }
+                        }
+                    }
+                });
             }
         });
     </script>
