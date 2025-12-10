@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아차사고 분석</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 메인으로</a>
+        <h2>📸 아차사고 위험 분석</h2>
+
+        <input type="file" id="image-input" accept="image/*" style="display:none;" onchange="previewImage(event)">
+        <button class="btn" onclick="document.getElementById('image-input').click()">📷 사진 촬영 / 업로드</button>
+        
+        <img id="preview" alt="미리보기">
+        <button class="btn" id="analyze-btn" onclick="analyze()" style="display:none; background-color: #27ae60;">🔍 AI 분석 시작</button>
+
+        <div id="result-area" style="display:none;"></div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        import { CONFIG } from './apikey.js';
+
+        window.previewImage = function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const img = document.getElementById('preview');
+                img.src = URL.createObjectURL(file);
+                img.style.display = 'block';
+                document.getElementById('analyze-btn').style.display = 'block';
+                document.getElementById('result-area').style.display = 'none';
+            }
+        }
+
+        window.analyze = async function() {
+            const fileInput = document.getElementById('image-input');
+            const resultDiv = document.getElementById('result-area');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerText = "⏳ Gemini가 위험 요소를 분석 중입니다...";
+
+            try {
+                const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                
+                const file = fileInput.files[0];
+                const base64Data = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+
+                const prompt = "이 건설 현장 사진을 보고 [위험 요소 / 예상 사고 / 조치 사항 / 위험 등급] 형식으로 간단명료하게 보고서를 써줘.";
+                
+                const result = await model.generateContent([
+                    prompt, 
+                    { inlineData: { data: base64Data, mimeType: file.type } }
+                ]);
+                
+                resultDiv.innerText = result.response.text();
+
+            } catch (error) {
+                resultDiv.innerText = "❌ 오류 발생: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안전 통계</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 메인으로</a>
+        <h2>📊 안전 관리 현황</h2>
+
+        <div class="card" style="display:block; margin-bottom: 20px;">
+            <h3>🌤️ 오늘의 날씨 (현장)</h3>
+            <p id="weather-text">데이터를 불러오는 중...</p>
+        </div>
+
+        <div class="card" style="display:block;">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <script type="module">
+        import { CONFIG } from './apikey.js';
+
+        // 1. 날씨 (예시 데이터 - 실제론 기상청 API 연동 필요)
+        document.getElementById('weather-text').innerText = "🌡️ 기온: 24°C | 💧 습도: 45% | 🌬️ 풍속: 2m/s (작업 양호)";
+
+        // 2. 차트 그리기
+        const ctx = document.getElementById('myChart');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['추락', '낙하', '전도', '협착', '화재'],
+                datasets: [{
+                    label: '이번 달 아차사고 신고 건수',
+                    data: [12, 5, 3, 2, 1],
+                    backgroundColor: '#3498db',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    </script>
+</body>
+</html>

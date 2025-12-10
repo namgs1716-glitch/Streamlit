@@ -3,24 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSI 안전관리 챗봇</title>
+    <title>건설 안전 AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div class="header">
-            <h3>🏗️ CSI 안전관리 도우미</h3>
-        </div>
-        <div class="chat-box" id="chat-box">
-            <div class="message bot">
-                반갑습니다. 무엇을 도와드릴까요?
-            </div>
-        </div>
-        <div class="input-area">
-            <input type="text" id="user-input" placeholder="질문을 입력하세요...">
-            <button onclick="sendMessage()">전송</button>
+    <div class="container">
+        <header>
+            <h1>🏗️ 스마트 건설안전</h1>
+            <p>오늘도 무재해 현장을 만들어갑니다.</p>
+        </header>
+
+        <div class="menu-grid">
+            <a href="chatbot.html" class="card">
+                <div class="icon">🤖</div>
+                <div class="info">
+                    <h3>CSI 안전 챗봇</h3>
+                    <p>안전 매뉴얼, 법령 질문하기</p>
+                </div>
+            </a>
+
+            <a href="analysis.html" class="card">
+                <div class="icon">📸</div>
+                <div class="info">
+                    <h3>아차사고 분석</h3>
+                    <p>사진 찍고 위험요소 찾기</p>
+                </div>
+            </a>
+
+            <a href="stats.html" class="card">
+                <div class="icon">📊</div>
+                <div class="info">
+                    <h3>안전 통계</h3>
+                    <p>날씨 및 신고 현황판</p>
+                </div>
+            </a>
         </div>
     </div>
-    <script src="script.js"></script>
 </body>
 </html>
