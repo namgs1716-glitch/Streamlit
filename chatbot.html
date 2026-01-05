@@ -21,41 +21,57 @@
         </div>
     </div>
 
-    <script type="module">
-         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
-    // 다시 apikey.js를 불러오게 수정합니다.
-         import { CONFIG } from './apikey.js'; 
-
-        const genAI = new GoogleGenerativeAI(CONFIG.GEMINI_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
-
-        window.sendMsg = async function() {
+    <script>
+        // ⚠️ import 문과 apikey.js는 이제 필요 없습니다! (보안상 삭제)
+        
+        async function sendMsg() {
             const input = document.getElementById('user-input');
             const chatBox = document.getElementById('chat-box');
             const msg = input.value;
+            
             if (!msg) return;
 
-            // 사용자 메시지 표시
+            // 1. 사용자 메시지 화면 표시
             chatBox.innerHTML += `<div class="message user">${msg}</div>`;
             input.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
+            // 로딩 표시 (선택사항)
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message bot';
+            loadingDiv.textContent = '규정을 찾아보고 있습니다...';
+            chatBox.appendChild(loadingDiv);
+
             try {
-                // 시스템 프롬프트 (챗봇의 페르소나 설정)
-                const prompt = `
-                    너는 한국의 '건설공사 안전관리 종합정보망(CSI)' 전문 AI 챗봇이야.
-                    건설 현장 작업자나 관리자가 안전 관련 질문을 하면, 건설기술진흥법과 CSI 매뉴얼에 기반해서 친절하고 전문적으로 답변해줘. 답변은 너무 길지 않게 물어본 내용에 대해 요약해서 안내해줘.
-                    질문: ${msg}
-                `;
+                // 2. 🔥 여기가 핵심! Gemini를 직접 부르지 않고, 우리 서버(chat.js)를 부릅니다.
+                const response = await fetch('/.netlify/functions/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: msg })
+                });
 
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const text = response.text();
+                const data = await response.json();
+                
+                // 로딩 메시지 삭제
+                chatBox.removeChild(loadingDiv);
 
-                chatBox.innerHTML += `<div class="message bot">${text}</div>`;
+                // 3. 서버(chat.js)가 준 답변 표시
+                if (data.reply) {
+                    // 줄바꿈 문자(\n)를 HTML 태그(<br>)로 변환해서 이쁘게 보여주기
+                    const formattedReply = data.reply.replace(/\n/g, '<br>');
+                    chatBox.innerHTML += `<div class="message bot">${formattedReply}</div>`;
+                } else {
+                    chatBox.innerHTML += `<div class="message bot">⚠️ 오류: ${data.error || '응답이 없습니다.'}</div>`;
+                }
+
             } catch (error) {
-                chatBox.innerHTML += `<div class="message bot">⚠️ 오류: ${error.message}</div>`;
+                chatBox.removeChild(loadingDiv);
+                console.error('Error:', error);
+                chatBox.innerHTML += `<div class="message bot">⚠️ 서버 통신 오류가 발생했습니다.</div>`;
             }
+            
             chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
