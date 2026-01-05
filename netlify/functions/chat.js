@@ -9,7 +9,7 @@ exports.handler = async function(event, context) {
     const userMessage = body.message;
 
     // 1. 설정
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
     // 2. 질문 임베딩
@@ -64,7 +64,7 @@ const prompt = `
       - 답변 내용은 비전문가도 이해하기 쉽게 '하십시오'체로 작성.
       - 답변 끝에 줄을 바꾸고 "(근거 자료: 문서 번호 ...)" 형식으로 출처 기재.
     `;
-    
+
     const result = await chatModel.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
