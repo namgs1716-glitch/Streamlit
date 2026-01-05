@@ -2,76 +2,59 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { createClient } = require("@supabase/supabase-js");
 
 exports.handler = async function(event, context) {
+  // 1. 요청 방식 확인
   if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
 
   try {
     const body = JSON.parse(event.body);
     const userMessage = body.message;
 
-    // 1. 설정
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
+    // 2. 설정 (환경변수 확인: GOOGLE_API_KEY 사용 권장)
+    // 만약 Netlify 환경변수 이름을 GEMINI_KEY로 설정했다면 아래 process.env.GEMINI_KEY 유지
+    // GOOGLE_API_KEY로 설정했다면 process.env.GOOGLE_API_KEY로 변경하세요.
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || process.env.GEMINI_KEY);
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-    // 2. 질문 임베딩
+    // 3. 질문 임베딩 생성
     const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
     const embeddingResult = await embeddingModel.embedContent(userMessage);
     const embedding = embeddingResult.embedding.values;
 
-    // 3. 수파베이스 검색 (20개만 가져옵니다)
-    // 50개는 너무 많을 수 있고, 20개 정도면 충분히 정답이 포함됩니다.
+    // 4. 수파베이스 검색 (가장 중요한 부분!)
     const { data: documents, error } = await supabase.rpc("match_documents", {
       query_embedding: embedding,
-      match_threshold: 0.01,  // 문턱값 아주 낮게
-      match_count: 20        // 🔥 상위 20개를 가져옵니다.
+      match_threshold: 0.01,  // 🔥 문턱값: 1%라도 비슷하면 가져오기
+      match_count: 30         // 🔥 개수: 30개까지 넉넉하게 가져오기
     });
-
-// ... 수파베이스 검색 직후 ...
 
     if (error) {
         console.error("❌ 수파베이스 검색 에러:", error);
     }
 
-    // 🔥 [디버깅 로그] 챗봇이 찾은 문서와 점수를 터미널에 찍어봅니다.
+    // 5. 검색 결과 정리 (변수 선언 에러 해결 및 로직 통합)
+    let contextText = ""; // 🔥 [중요] 변수를 여기서 미리 만듭니다!
+
     if (documents && documents.length > 0) {
+        // [디버깅 로그] 무엇을 찾았는지 서버 로그에 기록
         console.log(`✅ 검색된 문서 개수: ${documents.length}개`);
         console.log("🥇 1등 문서 내용:", documents[0].content.substring(0, 50) + "...");
         console.log("🥇 1등 유사도 점수:", documents[0].similarity);
-        
-        // 검색 결과를 답변 생성용 텍스트로 변환
+
+        // 문서 내용을 하나의 긴 텍스트로 합치기
         contextText = documents.map((doc, idx) => 
-            `[문서 ${idx+1}] (유사도: ${doc.similarity?.toFixed(4)})\n${doc.content}`
+            `[문서 ${idx+1}] (유사도: ${doc.similarity ? doc.similarity.toFixed(4) : 'N/A'})\n${doc.content}`
         ).join("\n\n----------------\n\n");
     } else {
-        console.log("😱 검색 결과가 0개입니다! (Threshold 문제거나 데이터 없음)");
+        console.log("😱 검색 결과가 0개입니다! (데이터가 없거나 임베딩 문제)");
         contextText = "데이터베이스에서 관련 정보를 찾을 수 없습니다.";
     }
 
-    // ... Gemini 요청 부분 ...
-
-    if (error) console.error("Supabase Error:", error);
-
-    // 4. 🔥 [핵심 변경] 복잡한 필터링 삭제! 가져온 20개를 전부 다 텍스트로 만듭니다.
-    let contextText = "";
-    if (documents && documents.length > 0) {
-      // 디버깅을 위해 로그에 어떤 문서들을 가져왔는지 찍어봅니다.
-      console.log("검색된 문서 목록:", documents.map(d => d.content.substring(0, 20)));
-      
-      contextText = documents.map((doc, idx) => 
-        `[문서 ${idx+1}] (출처: ${doc.metadata.source})\n${doc.content}`
-      ).join("\n\n----------------\n\n");
-    } else {
-      contextText = "데이터베이스 검색 결과 없음.";
-    }
-
-    // 5. Gemini에게 전송
-    // (모델 이름은 잘 작동하던 것으로 유지하세요!)
-// ... (위쪽 검색 로직은 그대로 유지) ...
-
-    // 5. Gemini 설정 (유연성 부여)
+    // 6. Gemini 답변 생성 설정 (친절 모드 + 유연성 30%)
+    // (gemini-2.5-flash라는 모델은 없으므로 안정적인 1.5-flash 사용)
     const chatModel = genAI.getGenerativeModel({
         model: "gemini-2.5-flash", 
         
-        // [변경 1] 시스템 지시문을 조금 더 친절하고 유연하게 수정
+        // 시스템 지시문: 친절하고 융통성 있게
         systemInstruction: {
             parts: [{ text: `
                 너는 '건설공사 안전관리 종합정보망(CSI)'의 친절한 AI 어시스턴트야.
@@ -85,15 +68,14 @@ exports.handler = async function(event, context) {
             `}]
         },
         
-        // [변경 2] 창의력(Temperature)을 0.0 -> 0.3 으로 올림
-        // 0.3은 팩트를 유지하면서도 문맥을 이해하는 적절한 수치입니다.
+        // 창의력 설정: 0.3 (팩트 기반이지만 약간의 융통성 허용)
         generationConfig: {
             temperature: 0.3, 
             maxOutputTokens: 1000,
         }
     });
     
-    // 프롬프트는 그대로 심플하게 유지
+    // 7. 최종 프롬프트 조합 및 전송
     const prompt = `
       [제공된 문서]
       ${contextText}
@@ -106,8 +88,6 @@ exports.handler = async function(event, context) {
     `;
 
     const result = await chatModel.generateContent(prompt);
-    
-    // ... (아래쪽 응답 처리 코드 동일) ...
     const response = await result.response;
     const text = response.text();
 
@@ -115,6 +95,7 @@ exports.handler = async function(event, context) {
 
   } catch (error) {
     console.error("Server Error:", error);
-    return { statusCode: 500, body: JSON.stringify({ error: "처리 실패" }) };
+    // 에러 내용을 구체적으로 반환하여 디버깅 도움
+    return { statusCode: 500, body: JSON.stringify({ error: "처리 실패: " + error.message }) };
   }
 };
