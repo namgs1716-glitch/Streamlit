@@ -22,7 +22,6 @@
     </div>
 
     <script>
-        // ⚠️ import 문과 apikey.js는 이제 필요 없습니다! (보안상 삭제)
         
         async function sendMsg() {
             const input = document.getElementById('user-input');
@@ -31,19 +30,16 @@
             
             if (!msg) return;
 
-            // 1. 사용자 메시지 화면 표시
             chatBox.innerHTML += `<div class="message user">${msg}</div>`;
             input.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            // 로딩 표시 (선택사항)
             const loadingDiv = document.createElement('div');
             loadingDiv.className = 'message bot';
             loadingDiv.textContent = '규정을 찾아보고 있습니다...';
             chatBox.appendChild(loadingDiv);
 
             try {
-                // 2. 🔥 여기가 핵심! Gemini를 직접 부르지 않고, 우리 서버(chat.js)를 부릅니다.
                 const response = await fetch('/.netlify/functions/chat', {
                     method: 'POST',
                     headers: {
@@ -57,9 +53,8 @@
                 // 로딩 메시지 삭제
                 chatBox.removeChild(loadingDiv);
 
-                // 3. 서버(chat.js)가 준 답변 표시
+                // 서버(chat.js)가 준 답변 표시
                 if (data.reply) {
-                    // 줄바꿈 문자(\n)를 HTML 태그(<br>)로 변환해서 이쁘게 보여주기
                     const formattedReply = data.reply.replace(/\n/g, '<br>');
                     chatBox.innerHTML += `<div class="message bot">${formattedReply}</div>`;
                 } else {
