@@ -91,6 +91,25 @@ exports.handler = async function(event, context) {
     const response = await result.response;
     const text = response.text();
 
+    // ---------------------------------------------------------
+    // 🔥 [추가된 기능] 대화 로그 기록 (비동기로 조용히 저장)
+    // ---------------------------------------------------------
+    try {
+        // 답변 실패 여부 판단 (죄송합니다, 없습니다 등이 포함되면 실패로 간주)
+        const isFailed = text.includes("죄송합니다") || text.includes("없습니다") || text.includes("정보가 없습니다");
+
+        // DB에 저장 (사용자 기다리지 않게 await 없이 실행하거나, 안전하게 await 사용)
+        await supabase.from("chat_logs").insert({
+            user_message: userMessage,
+            bot_reply: text,
+            is_failed: isFailed
+        });
+        
+    } catch (logError) {
+        console.error("로그 저장 실패 (사용자 답변엔 영향 없음):", logError);
+    }
+    // ---------------------------------------------------------
+
     return { statusCode: 200, body: JSON.stringify({ reply: text }) };
 
   } catch (error) {
