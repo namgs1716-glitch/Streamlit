@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSI 챗봇 관리자 페이지</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
+        h2 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        
+        .login-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input[type="password"], input[type="text"], textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 100px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        
+        .container { display: flex; gap: 20px; display: none; } /* 로그인 전엔 숨김 */
+        .log-section { flex: 1; background: white; padding: 15px; border-radius: 8px; max-height: 600px; overflow-y: auto; }
+        .teach-section { flex: 1; background: white; padding: 15px; border-radius: 8px; height: fit-content; }
+        
+        .log-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+        .log-item:hover { background-color: #eef7ff; }
+        .log-item small { color: #888; }
+        .log-user { font-weight: bold; color: #d9534f; }
+    </style>
+</head>
+<body>
+
+    <h2>👮‍♂️ AI 학습 관리자</h2>
+
+    <div class="login-box" id="login-area">
+        <p>관리자 비밀번호를 입력하세요.</p>
+        <input type="password" id="admin-pw" placeholder="비밀번호 입력" onkeypress="if(event.keyCode==13) login()">
+        <button onclick="login()">로그인 & 로그 불러오기</button>
+    </div>
+
+    <div class="container" id="main-area">
+        
+        <div class="log-section">
+            <h3>📝 답변 실패 로그</h3>
+            <div id="log-list">불러오는 중...</div>
+        </div>
+
+        <div class="teach-section">
+            <h3>🧠 지식 주입하기</h3>
+            <input type="hidden" id="target-log-id">
+            <label>질문 (사용자가 물어볼 말)</label>
+            <input type="text" id="teach-q" placeholder="예: 부산지역 강풍 기준은?">
+            
+            <label>정답 (AI가 답변할 내용)</label>
+            <textarea id="teach-a" placeholder="예: 부산지역은 해안가 특성상..."></textarea>
+            
+            <button onclick="teachAI()">학습 시키기</button>
+        </div>
+    </div>
+
+    <script>
+        let password = "";
+
+        async function login() {
+            password = document.getElementById('admin-pw').value;
+            if (!password) return alert("비밀번호를 입력하세요.");
+
+            // 로그 불러오기 시도
+            const result = await callAdminAPI('get_logs');
+            
+            if (result.error) {
+                alert("로그인 실패: " + result.error);
+            } else {
+                document.getElementById('login-area').style.display = 'none';
+                document.getElementById('main-area').style.display = 'flex';
+                renderLogs(result.logs);
+            }
+        }
+
+        async function callAdminAPI(action, data = {}) {
+            try {
+                const res = await fetch('/.netlify/functions/admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, password, ...data })
+                });
+                return await res.json();
+            } catch (e) {
+                console.error(e);
+                return { error: "서버 통신 오류" };
+            }
+        }
+
+        function renderLogs(logs) {
+            const list = document.getElementById('log-list');
+            list.innerHTML = "";
+
+            if (!logs || logs.length === 0) {
+                list.innerHTML = "<p>🎉 답변 실패한 로그가 없습니다.</p>";
+                return;
+            }
+
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'log-item';
+                div.innerHTML = `
+                    <div class="log-user">Q: ${log.user_message}</div>
+                    <small>${new Date(log.created_at).toLocaleString()}</small>
+                `;
+                // 클릭하면 오른쪽 입력창에 자동 채우기
+                div.onclick = () => {
+                    document.getElementById('teach-q').value = log.user_message;
+                    document.getElementById('target-log-id').value = log.id;
+                    document.getElementById('teach-a').focus();
+                };
+                list.appendChild(div);
+            });
+        }
+
+        async function teachAI() {
+            const q = document.getElementById('teach-q').value;
+            const a = document.getElementById('teach-a').value;
+            const id = document.getElementById('target-log-id').value; // 로그 ID (있으면 처리됨)
+
+            if (!q || !a) return alert("질문과 답변을 모두 입력해주세요.");
+
+            if (!confirm("이 내용을 AI에게 학습시키겠습니까?")) return;
+
+            const result = await callAdminAPI('teach', { q, a, id });
+
+            if (result.success) {
+                alert("✅ 학습 완료! 이제 챗봇이 이 내용을 압니다.");
+                document.getElementById('teach-q').value = "";
+                document.getElementById('teach-a').value = "";
+                document.getElementById('target-log-id').value = "";
+                
+                // 로그 목록 새로고침
+                const refresh = await callAdminAPI('get_logs');
+                renderLogs(refresh.logs);
+            } else {
+                alert("오류 발생: " + (result.error || "알 수 없음"));
+            }
+        }
+    </script>
+</body>
+</html>
