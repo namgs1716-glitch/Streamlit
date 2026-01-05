@@ -21,9 +21,32 @@ exports.handler = async function(event, context) {
     // 50개는 너무 많을 수 있고, 20개 정도면 충분히 정답이 포함됩니다.
     const { data: documents, error } = await supabase.rpc("match_documents", {
       query_embedding: embedding,
-      match_threshold: 0.1,  // 문턱값 아주 낮게
+      match_threshold: 0.01,  // 문턱값 아주 낮게
       match_count: 20        // 🔥 상위 20개를 가져옵니다.
     });
+
+// ... 수파베이스 검색 직후 ...
+
+    if (error) {
+        console.error("❌ 수파베이스 검색 에러:", error);
+    }
+
+    // 🔥 [디버깅 로그] 챗봇이 찾은 문서와 점수를 터미널에 찍어봅니다.
+    if (documents && documents.length > 0) {
+        console.log(`✅ 검색된 문서 개수: ${documents.length}개`);
+        console.log("🥇 1등 문서 내용:", documents[0].content.substring(0, 50) + "...");
+        console.log("🥇 1등 유사도 점수:", documents[0].similarity);
+        
+        // 검색 결과를 답변 생성용 텍스트로 변환
+        contextText = documents.map((doc, idx) => 
+            `[문서 ${idx+1}] (유사도: ${doc.similarity?.toFixed(4)})\n${doc.content}`
+        ).join("\n\n----------------\n\n");
+    } else {
+        console.log("😱 검색 결과가 0개입니다! (Threshold 문제거나 데이터 없음)");
+        contextText = "데이터베이스에서 관련 정보를 찾을 수 없습니다.";
+    }
+
+    // ... Gemini 요청 부분 ...
 
     if (error) console.error("Supabase Error:", error);
 
