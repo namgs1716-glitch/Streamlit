@@ -44,7 +44,7 @@ exports.handler = async function(event, context) {
 
     // 6. Gemini 모델 설정
     const chatModel = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash", 
+        model: "gemini-2.5-flash", 
         systemInstruction: {
             parts: [{ text: `
                 너는 '건설공사 안전관리 종합정보망(CSI)'의 AI 안전 전문가야.
