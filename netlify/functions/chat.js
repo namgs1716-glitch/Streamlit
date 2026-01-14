@@ -22,7 +22,7 @@ exports.handler = async function(event, context) {
     // 🔥 중요: match_threshold를 0.4~0.5로 높여서 '진짜 비슷한 질문'만 찾습니다.
     const { data: documents, error } = await supabase.rpc("match_safety_docs", {
       query_embedding: embedding,
-      match_threshold: 0.40, 
+      match_threshold: 0.25, 
       match_count: 5 
     });
 
