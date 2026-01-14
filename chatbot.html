@@ -3,70 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSI 챗봇</title>
-    <link rel="stylesheet" href="style.css">
+    <title>CSI 안전 챗봇</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* 스타일은 기존과 비슷하되 가독성을 높였습니다 */
+        body { font-family: 'Suit', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { width: 400px; height: 600px; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        h2 { background: #0056b3; color: white; margin: 0; padding: 20px; text-align: center; font-size: 1.2rem; }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 15px; font-size: 0.95rem; line-height: 1.5; word-break: keep-all; }
+        .bot { background: #e9ecef; color: #333; align-self: flex-start; border-bottom-left-radius: 0; }
+        .user { background: #0056b3; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
+        .input-area { display: flex; padding: 15px; border-top: 1px solid #eee; background: white; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        button { margin-left: 10px; padding: 10px 20px; background: #0056b3; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #004494; }
+        
+        /* 마크다운 스타일링 */
+        .bot ul, .bot ol { padding-left: 20px; margin: 5px 0; }
+        .bot strong { color: #d63384; } /* 강조색 */
+        .bot p { margin: 5px 0; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="back-link">← 메인으로</a>
-        <h2>🤖 CSI 안전 가이드</h2>
+        <h2>👷 CSI 안전 가이드</h2>
 
         <div id="chat-box">
-            <div class="message bot">안녕하세요! 건설공사 안전관리 종합정보망(CSI) 및 안전 수칙에 대해 궁금한 점을 물어보세요.</div>
+            <div class="message bot">
+                안녕하세요! 건설 안전에 대해 궁금한 점을 물어보세요.<br>
+                (예: "비계 설치 기준이 뭐야?", "신규 교육 몇 시간이야?")
+            </div>
         </div>
 
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="질문을 입력하세요 (엔터로 전송)" onkeypress="if(event.keyCode==13) sendMsg()">
-            <button class="btn" onclick="sendMsg()">전송</button>
+            <input type="text" id="user-input" placeholder="질문을 입력하세요..." onkeypress="if(event.keyCode==13) sendMsg()">
+            <button onclick="sendMsg()">전송</button>
         </div>
     </div>
 
     <script>
-        
         async function sendMsg() {
             const input = document.getElementById('user-input');
             const chatBox = document.getElementById('chat-box');
-            const msg = input.value;
+            const msg = input.value.trim();
             
             if (!msg) return;
 
+            // 사용자 메시지 표시
             chatBox.innerHTML += `<div class="message user">${msg}</div>`;
             input.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollToBottom();
 
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message bot';
-            loadingDiv.textContent = '규정을 찾아보고 있습니다...';
-            chatBox.appendChild(loadingDiv);
+            // 로딩 표시
+            const loadingId = 'loading-' + Date.now();
+            chatBox.innerHTML += `<div class="message bot" id="${loadingId}">규정을 찾아보는 중... 🔍</div>`;
+            scrollToBottom();
 
             try {
                 const response = await fetch('/.netlify/functions/chat', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: msg })
                 });
 
                 const data = await response.json();
                 
-                // 로딩 메시지 삭제
-                chatBox.removeChild(loadingDiv);
+                // 로딩 메시지 제거
+                const loadingDiv = document.getElementById(loadingId);
+                if (loadingDiv) loadingDiv.remove();
 
-                // 서버(chat.js)가 준 답변 표시
                 if (data.reply) {
-                    const formattedReply = data.reply.replace(/\n/g, '<br>');
-                    chatBox.innerHTML += `<div class="message bot">${formattedReply}</div>`;
+                    // 마크다운을 HTML로 변환하여 표시 (marked 라이브러리 사용)
+                    const htmlReply = marked.parse(data.reply);
+                    chatBox.innerHTML += `<div class="message bot">${htmlReply}</div>`;
                 } else {
-                    chatBox.innerHTML += `<div class="message bot">⚠️ 오류: ${data.error || '응답이 없습니다.'}</div>`;
+                    chatBox.innerHTML += `<div class="message bot">⚠️ 죄송합니다. 정보를 가져오지 못했습니다.</div>`;
                 }
 
             } catch (error) {
-                chatBox.removeChild(loadingDiv);
+                const loadingDiv = document.getElementById(loadingId);
+                if (loadingDiv) loadingDiv.remove();
                 console.error('Error:', error);
-                chatBox.innerHTML += `<div class="message bot">⚠️ 서버 통신 오류가 발생했습니다.</div>`;
+                chatBox.innerHTML += `<div class="message bot">⚠️ 서버 연결에 실패했습니다.</div>`;
             }
             
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const chatBox = document.getElementById('chat-box');
             chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
